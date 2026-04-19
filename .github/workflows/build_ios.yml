@@ -1,0 +1,44 @@
+name: Build Flutter IPA
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # allows manual trigger from GitHub UI
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      # ── 1. Checkout code ──
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Setup Flutter ──
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      # ── 3. Install dependencies ──
+      - name: Install dependencies
+        run: flutter pub get
+
+      # ── 4. Build iOS (no codesign — no Apple dev account needed) ──
+      - name: Build IPA (no codesign)
+        run: |
+          flutter build ios --release --no-codesign
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/Release-iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r ReminderApp.ipa Payload/
+
+      # ── 5. Upload IPA as artifact ──
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReminderApp-IPA
+          path: build/ios/ipa/ReminderApp.ipa
+          retention-days: 30
